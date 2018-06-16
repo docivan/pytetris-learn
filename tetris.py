@@ -4,7 +4,7 @@ import numpy as np
 scrw = 300
 scrh = 600
 
-tilesz = 20
+tilesz = 10
 
 tilew = int(scrw/tilesz)
 tileh = int(scrh/tilesz)
@@ -50,12 +50,23 @@ pieces = [
 
 pieces = [np.array(x) for x in pieces]
 
+colors = [
+(255,0,0),
+(0,255,0),
+(0,0,255),
+(255,255,0),
+(255,0,255),
+(0,255,255),
+(255,255,255)
+]
+
 #moving piece
-cp_speed = 20 #ie 1 pxl for every 20 ticks
+level_speed = 20
+cp_speed = 20 #ie 1 tile for every 20 ticks
 cp_speed_counter = 0
 cp_x = 0
 cp_y = 0
-cp_col = (255,0,0)
+cp_color = (255,0,0)
 current_piece = pieces[0]
 
 solid = [[(0,0,0) for i in range(tilew)] for j in range(tileh)]
@@ -68,16 +79,13 @@ def draw_segment(pos, color):
     pygame.draw.rect(screen, (0,0,0), pygame.Rect(pos[0]+2, pos[1]+2, tilesz-4, tilesz-4))
     pygame.draw.rect(screen, color, pygame.Rect(pos[0]+4, pos[1]+4, tilesz-8, tilesz-8))
 
-def draw_piece(id, pos, col, rot = 0):
+def draw_piece(piece, pos, col):
     """
     draw an entire piece from list with a given color and rotation
     NB! pos is in pixels
     """
     assert len(pos) == 2
     assert len(col) == 3
-    assert id >= 0 and id < len(pieces)
-
-    piece = np.rot90(pieces[id], rot)
 
     for y in range(piece.shape[0]):
         for x in range(piece.shape[1]):
@@ -113,15 +121,12 @@ def ck_tile_overlap(pos1, pos2):
     return False
 
 
-def ck_collision(id, pos, rot) :
+def ck_collision(piece, pos) :
     """
     check a piece for a collision at any given point
     NB! pos in pixels
     """
     assert len(pos) == 2
-    assert id >= 0 and id < len(pieces)
-
-    piece = np.rot90(pieces[id], rot)
 
     for y in range(piece.shape[0]):
         for x in range(piece.shape[1]):
@@ -132,32 +137,65 @@ def ck_collision(id, pos, rot) :
                             ck_tile_overlap((pos[0] + x*tilesz, pos[1] + y*tilesz), \
                             (j*tilesz, i*tilesz))
 
+def gen_new_piece():
+    #set all cp_ params
+    return True
 
-## init
-pygame.init()
-screen = pygame.display.set_mode((scrw, scrh))
+def handle_input():
+    global current_piece
+    global cp_speed
+    global cp_x
+    global cp_y
+    global done
 
-
-## main loop
-clock = pygame.time.Clock()
-
-while not done:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             done = True
 
     pressed = pygame.key.get_pressed()
-    if pressed[pygame.K_UP]: y -= 3
-    if pressed[pygame.K_DOWN]: y += 3
-    if pressed[pygame.K_LEFT]: x -= 3
-    if pressed[pygame.K_RIGHT]: x += 3
+
+    if pressed[pygame.K_UP]:
+        current_piece = np.rot90(current_piece)
+
+    if pressed[pygame.K_DOWN]:
+        cp_speed = level_speed / 2
+    else:
+        cp_speed = level_speed
+
+    if pressed[pygame.K_LEFT]: cp_x -= tilesz
+    if pressed[pygame.K_RIGHT]: cp_x += tilesz
     if pressed[pygame.K_ESCAPE]: done = True
 
+def render():
     screen.fill((0, 0, 0))
 
     # draw current piece
     draw_piece(current_piece, (cp_x, cp_y), cp_color)
+    pygame.display.flip()
+
+def logic():
+    global cp_speed_counter
+    global cp_x
+    global cp_y
+
     #ck_collision(0,(0,0),0)
 
-    pygame.display.flip()
+    cp_speed_counter+=1
+
+    if cp_speed_counter >= cp_speed:
+        cp_speed_counter = 0
+        cp_y+=tilesz
+
+
+## init
+pygame.init()
+screen = pygame.display.set_mode((scrw, scrh))
+
+## main loop
+clock = pygame.time.Clock()
+
+while not done:
+    handle_input()
+    render()
+    logic()
     clock.tick(60)
